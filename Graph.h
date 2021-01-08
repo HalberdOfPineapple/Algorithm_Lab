@@ -3,10 +3,12 @@
 #include<vector>
 #include<climits>
 #include<unordered_map>
+#include<unordered_set>
+#include<algorithm>
+#include "disjoint_set.h"
 using namespace std;
 
 typedef pair<int,int> dw_pair;
-string SEPERATION = "----------------------------------------------------------\n";
 
 struct Vertex{
     int index;
@@ -20,6 +22,9 @@ struct Vertex{
 typedef struct Edge{
     int src, dest, weight;
 } Edge;
+
+bool edge_comp(Edge e1,Edge e2) { return e1.weight < e2.weight; }
+bool(*fp_edge)(Edge,Edge) = edge_comp;
 
 int parent(int i){ return (i-1)/2; }
 int left(int i){ return 2*i + 1; }
@@ -108,12 +113,15 @@ class Graph{
 public:
     vector<Vertex*> vertices;
     vector<list<dw_pair>> adj_list;
+
+
+    vector<Edge> edge_vec;
     Graph(int num_vet);
     Graph(int num_vet,vector<Edge>& input_edges);
     void print_edges();
-    void add_edge(Edge& edge);
+    void add_edge(Edge edge);
 
-    Graph* mst_prim(int r);
+    void print_edge_vec() const;
 };
 
 Graph::Graph(int num_vet)
@@ -129,13 +137,16 @@ Graph::Graph(int num_vet)
     }
 }
 
-void Graph::add_edge(Edge& edge) {
+void Graph::add_edge(Edge edge) {
     if (edge.src >= adj_list.size() || edge.src < 0)
         throw invalid_argument("invalid src vertex id\n");
     if (edge.dest >= adj_list.size() || edge.dest < 0)
         throw invalid_argument("invalid dest vertex id\n");
+
     adj_list[edge.src].push_back(make_pair(edge.dest,edge.weight));
     adj_list[edge.dest].push_back(make_pair(edge.src,edge.weight));
+
+    edge_vec.push_back(edge);
 }
 
 Graph::Graph(int num_vet,vector<Edge>& input_edges)
@@ -165,6 +176,16 @@ void Graph::print_edges()
     }
     printf("\n");
 }
+
+void Graph::print_edge_vec() const
+{
+    for (auto e : edge_vec)
+    {
+        cout << "(" << e.src << ", " << e.dest << ") Weight = " << e.weight << endl;
+    }
+    cout << endl;
+}
+
 
 Graph* mst_prim(Graph* G,int r)
 {
@@ -206,5 +227,26 @@ Graph* mst_prim(Graph* G,int r)
         }
     }
 
+    return mst;
+}
+
+Graph* mst_kruskal(Graph* G)
+{
+    Graph* mst = new Graph(G->vertices.size());
+    Tree_Sets<Vertex*> vertex_TS;
+    for (Vertex* v : G->vertices)
+        vertex_TS.make_set(v);
+    sort(G->edge_vec.begin(),G->edge_vec.end(),edge_comp);
+
+    for (Edge e : G->edge_vec)
+    {
+        Vertex* u = G->vertices[e.src];
+        Vertex* v = G->vertices[e.dest];
+        if (vertex_TS.find_set(u) != vertex_TS.find_set(v))
+        {
+            mst->add_edge(e);
+            vertex_TS.ts_union(u,v);
+        }
+    }
     return mst;
 }
